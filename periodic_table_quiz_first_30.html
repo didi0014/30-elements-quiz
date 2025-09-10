@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Didier's First 30 Elements Quiz</title>
+  <style>
+    :root{--tile-size:68px;--gap:6px;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;}
+    body{margin:18px;background:linear-gradient(180deg,#f7fbff,#ffffff);color:#0b1220}
+    h1{font-size:20px;margin:0 0 8px}
+    .app{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 360px;gap:20px}
+    .board{background:#ffffff;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(13,30,60,0.06)}
+    .controls{background:#fff;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(13,30,60,0.06)}
+
+    .grid{display:grid;grid-template-columns:repeat(18, calc(var(--tile-size)));grid-auto-rows:calc(var(--tile-size));gap:var(--gap);justify-content:start}
+    .cell{width:var(--tile-size);height:var(--tile-size);border-radius:8px;background:#f3f6fb;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:600;color:#07203a;position:relative;padding:6px;box-sizing:border-box;cursor:pointer;user-select:none;transition:transform 0.1s ease, background 0.3s ease}
+    .cell.empty{background:transparent;cursor:default}
+    .cell:hover{transform:scale(1.05);}
+    .cell.correct{background:linear-gradient(180deg,#dff7df,#bff3c4)!important;box-shadow:inset 0 -2px 0 rgba(0,0,0,0.03)}
+    .cell.active{background:linear-gradient(180deg,#d9e9ff,#b3d0ff)!important;}
+    .cell.revealed{background:linear-gradient(180deg,#fff3d9,#ffe7b3)!important;}
+    .cell .num{position:absolute;top:6px;left:8px;font-size:12px;opacity:0.7}
+    .cell .name{font-size:10px;opacity:0.9}
+
+    .guess-row{display:flex;gap:8px;margin-bottom:12px}
+    .guess-row input[type=text]{flex:1;padding:10px;border-radius:8px;border:1px solid #dbe7f5;font-size:15px}
+    button{background:#0b63ff;color:#fff;border:none;padding:10px 12px;border-radius:8px;font-weight:600;cursor:pointer}
+    .muted{background:#eef4ff;color:#0b63ff;border:1px solid rgba(11,99,255,0.12)}
+    .secondary{background:#fff;border:1px solid #e6eefc;color:#0b63ff}
+    .stat{margin-bottom:8px}
+    .remaining-list{max-height:360px;overflow:auto;border-radius:8px;padding:8px;background:#fbfdff;border:1px solid #eef4ff}
+    .small{font-size:13px;color:#213145}
+    .controls .btns{display:flex;gap:8px;margin-bottom:10px}
+    footer{margin-top:12px;font-size:13px;color:#53627a}
+
+    @media (max-width:920px){.app{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="board">
+      <h1>Didier's First 30 Elements Quiz</h1>
+      <p class="small">Type an element name or symbol (case-insensitive), or click a tile. Correct answers turn green. Use Reveal to show an answer.</p>
+
+      <div id="grid" class="grid" aria-label="Periodic table quiz grid"></div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+        <div style="flex:1">
+          <div class="guess-row">
+            <input id="guessInput" type="text" placeholder="Type element name or symbol and press Enter" aria-label="Element guess input" />
+            <button id="submitBtn">Guess</button>
+            <button id="revealBtn" class="muted">Reveal</button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button id="showAllBtn" class="secondary">Show All Answers</button>
+            <button id="resetBtn" class="secondary">Reset</button>
+          </div>
+        </div>
+        <div style="width:280px">
+          <div class="stat"><strong id="score">0</strong> / 30 correct</div>
+          <div class="stat small">Guessed: <span id="guessedCount">0</span></div>
+          <div class="stat small">Wrong attempts: <span id="wrongCount">0</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <aside class="controls">
+      <h2 style="font-size:16px;margin:0 0 8px">Remaining Elements</h2>
+      <div class="remaining-list" id="remainingList"></div>
+      <footer>
+        <div class="small">How it works: elements are placed in their normal periodic positions. This quiz includes only atomic numbers 1–30. Click any cell to guess that element, or type its name/symbol.</div>
+      </footer>
+    </aside>
+  </div>
+
+  <script>
+    const elements = [
+      {num:1,sym:'H',name:'Hydrogen',col:1,row:1},
+      {num:2,sym:'He',name:'Helium',col:18,row:1},
+      {num:3,sym:'Li',name:'Lithium',col:1,row:2},
+      {num:4,sym:'Be',name:'Beryllium',col:2,row:2},
+      {num:5,sym:'B',name:'Boron',col:13,row:2},
+      {num:6,sym:'C',name:'Carbon',col:14,row:2},
+      {num:7,sym:'N',name:'Nitrogen',col:15,row:2},
+      {num:8,sym:'O',name:'Oxygen',col:16,row:2},
+      {num:9,sym:'F',name:'Fluorine',col:17,row:2},
+      {num:10,sym:'Ne',name:'Neon',col:18,row:2},
+      {num:11,sym:'Na',name:'Sodium',col:1,row:3},
+      {num:12,sym:'Mg',name:'Magnesium',col:2,row:3},
+      {num:13,sym:'Al',name:'Aluminium',col:13,row:3},
+      {num:14,sym:'Si',name:'Silicon',col:14,row:3},
+      {num:15,sym:'P',name:'Phosphorus',col:15,row:3},
+      {num:16,sym:'S',name:'Sulfur',col:16,row:3},
+      {num:17,sym:'Cl',name:'Chlorine',col:17,row:3},
+      {num:18,sym:'Ar',name:'Argon',col:18,row:3},
+      {num:19,sym:'K',name:'Potassium',col:1,row:4},
+      {num:20,sym:'Ca',name:'Calcium',col:2,row:4},
+      {num:21,sym:'Sc',name:'Scandium',col:3,row:4},
+      {num:22,sym:'Ti',name:'Titanium',col:4,row:4},
+      {num:23,sym:'V',name:'Vanadium',col:5,row:4},
+      {num:24,sym:'Cr',name:'Chromium',col:6,row:4},
+      {num:25,sym:'Mn',name:'Manganese',col:7,row:4},
+      {num:26,sym:'Fe',name:'Iron',col:8,row:4},
+      {num:27,sym:'Co',name:'Cobalt',col:9,row:4},
+      {num:28,sym:'Ni',name:'Nickel',col:10,row:4},
+      {num:29,sym:'Cu',name:'Copper',col:11,row:4},
+      {num:30,sym:'Zn',name:'Zinc',col:12,row:4}
+    ];
+
+    const total = elements.length;
+    const grid = document.getElementById('grid');
+    const guessInput = document.getElementById('guessInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const revealBtn = document.getElementById('revealBtn');
+    const showAllBtn = document.getElementById('showAllBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const remainingList = document.getElementById('remainingList');
+    const scoreEl = document.getElementById('score');
+    const guessedCountEl = document.getElementById('guessedCount');
+    const wrongCountEl = document.getElementById('wrongCount');
+
+    const byNum = {}, byNameLower = {}, bySymLower = {};
+    elements.forEach(e=>{ byNum[e.num]=e; byNameLower[e.name.toLowerCase()]=e; bySymLower[e.sym.toLowerCase()]=e; });
+
+    const cols = 18; const rows = 7;
+    const cells = {};
+
+    function buildGrid(){
+      grid.innerHTML='';
+      for(let r=1;r<=rows;r++){
+        for(let c=1;c<=cols;c++){
+          const div=document.createElement('div');
+          div.className='cell empty';
+          div.dataset.col=c;div.dataset.row=r;
+          div.style.gridColumn = c + ' / span 1';
+          div.style.gridRow = r + ' / span 1';
+          grid.appendChild(div);
+          cells[`${r}-${c}`]=div;
+        }
+      }
+      elements.forEach(e=>{
+        const cell = cells[`${e.row}-${e.col}`];
+        if(!cell) return;
+        cell.className='cell';
+        cell.dataset.num = e.num;
+        cell.innerHTML = `<div class="num">${e.num}</div><div class="name" style="display:none">${e.name}</div>`;
+        cell.title = `Atomic #${e.num}`;
+        cell.addEventListener('click', ()=>onCellClick(e.num, cell));
+      });
+    }
+
+    let guessed = {};
+    let wrongAttempts = 0;
+    let activeCell = null;
+
+    function updateStats(){
+      const correct = Object.keys(guessed).length;
+      scoreEl.textContent = correct;
+      guessedCountEl.textContent = correct;
+      wrongCountEl.textContent = wrongAttempts;
+      updateRemainingList();
+    }
+
+    function updateRemainingList(){
+      remainingList.innerHTML='';
+      const remain = elements.filter(e=>!guessed[e.num]).sort((a,b)=>a.name.localeCompare(b.name));
+      remain.forEach(e=>{
+        const d=document.createElement('div');
+        d.className='small';
+        d.textContent = e.name;
+        remainingList.appendChild(d);
+      });
+      if(remain.length===0){
+        const d=document.createElement('div');
+        d.className='small';
+        d.textContent='All done — nice!';
+        remainingList.appendChild(d);
+      }
+    }
+
+    function markCorrect(num){
+      guessed[num]=true;
+      const cell = document.querySelector(`.cell[data-num='${num}']`);
+      if(cell){ cell.classList.remove('active'); cell.classList.add('correct'); cell.querySelector('.name').style.display='block'; }
+      updateStats();
+    }
+
+    function onCellClick(num, cell){
+      if(guessed[num]) return;
+      if(activeCell) activeCell.classList.remove('active');
+      activeCell = cell;
+      activeCell.classList.add('active');
+      guessInput.focus();
+    }
+
+    function normalize(s){return (s||'').toLowerCase().replace(/\s+/g,' ')}
+
+    function checkAnswer(input, opts={}){
+      const text = normalize(input);
+      if(!text){ return; }
+      let matched = null;
+      if(bySymLower[text]) matched = bySymLower[text];
+      if(byNameLower[text]) matched = byNameLower[text];
+      if(!matched){
+        if(text==='aluminum' && byNameLower['aluminium']) matched=byNameLower['aluminium'];
+        if(text==='sulphur' && byNameLower['sulfur']) matched=byNameLower['sulfur'];
+      }
+
+      if(activeCell && activeCell.dataset.num){
+        const targetNum = parseInt(activeCell.dataset.num);
+        if(matched && matched.num===targetNum){
+          markCorrect(targetNum); guessInput.value=''; activeCell=null; return true;
+        } else { wrongAttempts++; updateStats(); alert('No — that guess does not match this atomic number.'); return false; }
+      }
+
+      if(matched){
+        if(guessed[matched.num]){ alert('You already got that one!'); return false; }
+        markCorrect(matched.num);
+        guessInput.value='';
+        return true;
+      }
+
+      const asNum = parseInt(input,10);
+      if(!isNaN(asNum) && byNum[asNum]){
+        if(!guessed[asNum]){ markCorrect(asNum); return true; }
+        else { alert('Already guessed that number.'); return false; }
+      }
+      wrongAttempts++; updateStats(); alert('Incorrect — try again.');
+      return false;
+    }
+
+    submitBtn.addEventListener('click', ()=>{ checkAnswer(guessInput.value); });
+    guessInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ checkAnswer(guessInput.value); } });
+
+    revealBtn.addEventListener('click', ()=>{
+      if(activeCell && activeCell.dataset.num){
+        const targetNum = parseInt(activeCell.dataset.num);
+        if(!guessed[targetNum]){
+          guessed[targetNum] = true;
+          activeCell.classList.remove('active');
+          activeCell.classList.add('revealed');
+          activeCell.querySelector('.name').style.display='block';
+          activeCell = null;
+          updateStats();
+          return;
+        }
+      }
+      const remain = elements.filter(e=>!guessed[e.num]);
+      if(remain.length===0) return alert('No remaining elements to reveal.');
+      const pick = remain[Math.floor(Math.random()*remain.length)];
+      const cell = document.querySelector(`.cell[data-num='${pick.num}']`);
+      if(cell){ cell.classList.add('revealed'); cell.querySelector('.name').style.display='block'; }
+      guessed[pick.num]=true;
+      updateStats();
+    });
+
+    showAllBtn.addEventListener('click', ()=>{
+      elements.forEach(e=>{
+        const cell = document.querySelector(`.cell[data-num='${e.num}']`);
+        if(cell){ cell.classList.add('revealed'); cell.querySelector('.name').style.display='block'; }
+        guessed[e.num]=true;
+      });
+      updateStats();
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      guessed = {}; wrongAttempts=0; activeCell=null;
+      document.querySelectorAll('.cell').forEach(c=>{ c.classList.remove('correct','revealed','active'); const name = c.querySelector('.name'); if(name) name.style.display='none'; });
+      guessInput.value='';
+      updateStats();
+    });
+
+    buildGrid(); updateStats();
+  </script>
+</body>
+</html>
